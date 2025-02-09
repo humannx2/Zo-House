@@ -1,9 +1,38 @@
-from crewai import Agent
+from crewai import Agent,LLM
+from tools import csv_tool
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-data_collector = Agent(
-    role="Data Collector",
-    goal="Fetch patient data securely from Reclaim Protocol and update patient profiles.",
-    # tools=["OMI_API", "Reclaim_API", "SmartContract_Interface"],
-    backstory="An AI-powered health data specialist ensuring decentralized patient data management."
+# api_key = os.environ.get("GROQ_API_KEY")
+# llm = LLM(model="groq/llama3-8b-8192", temperature=0.7, api_key=api_key)
+
+api_key = os.environ.get("OPENAI_API_KEY")
+llm = LLM(model="gpt-4o-mini", temperature=0.7, api_key=api_key)
+
+# Define the AI Agent
+als_agent = Agent(
+    role="ALS Data Analyst",
+
+    goal="Analyze and extract insights from the ALS dataset to help caregivers",
+    tools=[csv_tool],
+    backstory=(
+        "A data expert specializing in ALS research, dedicated to extracting "
+        "useful information for patient care and medical research."
+    ),
+    verbose=True,
+    llm=llm
 )
+
+caregiving_agent = Agent(
+    role="Caregiver Assistant",
+    goal="Provide tailored caregiving advice for ALS patients based onthe following symptoms {data} and dataset insights provided by the ALS analyst",
+    backstory=("A virtual caregiver assistant that helps family members and healthcare professionals "
+              "by providing personalized caregiving recommendations based on patient data."),
+    verbose=True,
+    llm=llm
+)
+
+
+
 
