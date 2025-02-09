@@ -1,5 +1,5 @@
 from crewai import Task
-from agents import als_agent, caregiving_agent
+from agents import als_agent, caregiving_agent, followup_agent
 als_analysis_task = Task(
     description="Analyze the ALS dataset and identify key patterns in disease progression.",
     agent=als_agent,
@@ -14,3 +14,11 @@ caregiving_task = Task(
     agent=caregiving_agent,
     expected_output="Personalized caregiving advice including daily care routines, symptom management, and emergency guidelines."
 )
+
+from agents import followup_agent
+
+followup_task = Task(
+    description="Ask follow-up questions based on previous caregiving advice and responses.",
+    agent=followup_agent,
+    expected_output="A structured follow-up question set based on the patient's condition."
+) 

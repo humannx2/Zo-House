@@ -52,25 +52,86 @@
 
 
 from crewai import Crew
-from tasks import als_analysis_task, caregiving_task
-from agents import als_agent, caregiving_agent
+from tasks import als_analysis_task, caregiving_task, followup_task
+from agents import als_agent, caregiving_agent, followup_agent
 from tools import csv_tool
+import schedule
+import time
+import threading
+from flask import Flask, request, jsonify
 
-# Create the Crew with both agents
+app = Flask(__name__)
+
+scheduled_followups = {}
+
+@app.route('/als_caregiver', methods=['POST'])
+def als_caregiver():
+    try:
+        # Get user data from request
+        user_data = request.json
+
+        if not user_data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Run CrewAI agents with user input
+        result = als_caregiver_crew.kickoff(inputs={"data": user_data})
+        result=result.raw
+        patient_id = user_data.get("patient_name", "unknown")
+        if patient_id not in scheduled_followups:
+            schedule_followups(patient_id)
+
+        return jsonify({
+            "caregiving_advice": caregiving_plan,
+            "message": f"Follow-ups have been scheduled every 10 minutes for {patient_id}."
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 als_caregiver_crew = Crew(
     agents=[als_agent, caregiving_agent],
     tasks=[als_analysis_task, caregiving_task],
     verbose=True
 )
 
-user_data = {
-        "patient_name": "John Doe",
-        "age": 65,
-        "symptoms": ["Difficulty swallowing", "Muscle weakness", "Fatigue"],
-        "mobility_status": "Wheelchair-bound",
-        "communication_ability": "Limited speech",
-        "medications": ["Riluzole"],
-        "caregiver_notes": "Struggles with daily activities, needs assistance with feeding."
-    }
 
-als_caregiver_crew.kickoff(inputs={"data":user_data})
+
+def schedule_followups(patient_id):
+    """Schedule follow-up questions for a specific patient."""
+    if patient_id in scheduled_followups:
+        return
+
+    def run_followup():
+        result = followup_crew.kickoff()
+        print(f"💬 Follow-up question for {patient_id}: {result.raw}")
+
+    # Schedule the follow-up task every 10 minutes
+    schedule.every(10).minutes.do(run_followup)
+    scheduled_followups[patient_id] = True
+    print(f"✅ Follow-ups scheduled for {patient_id}.")
+
+# Function to continuously check and run scheduled tasks
+def run_scheduler():
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+# Start scheduler in a separate thread
+threading.Thread(target=run_scheduler, daemon=True).start()
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+# user_data = {
+#         "patient_name": "John Doe",
+#         "age": 65,
+#         "symptoms": ["Difficulty swallowing", "Muscle weakness", "Fatigue"],
+#         "mobility_status": "Wheelchair-bound",
+#         "communication_ability": "Limited speech",
+#         "medications": ["Riluzole"],
+#         "caregiver_notes": "Struggles with daily activities, needs assistance with feeding."
+#     }
+
+# als_caregiver_crew.kickoff(inputs={"data":user_data})
+
+
