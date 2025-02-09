@@ -35,7 +35,7 @@ caregiving_agent = Agent(
 
 followup_agent = Agent(
     role="Follow-Up Assistant",
-    goal="Ask the patient or caregiver follow-up questions based on previous responses.",
+    goal="Ask the patient or caregiver follow-up questions based on their report {report}.",
     backstory="A dedicated assistant designed to check on ALS patients regularly and collect additional caregiving data.",
     verbose=True,
     llm=llm

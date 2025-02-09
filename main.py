@@ -63,6 +63,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 scheduled_followups = {}
+report=[]
 
 @app.route('/als_caregiver', methods=['POST'])
 def als_caregiver():
@@ -76,12 +77,13 @@ def als_caregiver():
         # Run CrewAI agents with user input
         result = als_caregiver_crew.kickoff(inputs={"data": user_data})
         result=result.raw
+        report=result
         patient_id = user_data.get("patient_name", "unknown")
         if patient_id not in scheduled_followups:
             schedule_followups(patient_id)
 
         return jsonify({
-            "caregiving_advice": caregiving_plan,
+            "caregiving_advice": result,
             "message": f"Follow-ups have been scheduled every 10 minutes for {patient_id}."
         }), 200
 
@@ -94,6 +96,11 @@ als_caregiver_crew = Crew(
     verbose=True
 )
 
+followup_crew = Crew(
+    agents=[followup_agent],
+    tasks=[followup_task],
+    verbose=True
+)
 
 
 def schedule_followups(patient_id):
@@ -102,13 +109,15 @@ def schedule_followups(patient_id):
         return
 
     def run_followup():
-        result = followup_crew.kickoff()
+        result = followup_crew.kickoff(inputs={"report": report})
         print(f"💬 Follow-up question for {patient_id}: {result.raw}")
 
     # Schedule the follow-up task every 10 minutes
-    schedule.every(10).minutes.do(run_followup)
+    schedule.every(1).minutes.do(run_followup)
     scheduled_followups[patient_id] = True
     print(f"✅ Follow-ups scheduled for {patient_id}.")
+
+
 
 # Function to continuously check and run scheduled tasks
 def run_scheduler():
